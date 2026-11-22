@@ -99,7 +99,33 @@ class Learners extends Admin_Controller
             $this->session->set_flashdata('error', 'Program tags could not be saved. Check that the school year is open.');
         }
 
-        $filters = array('school_year_id' => (int) $enrollment->school_year_id);
+        $this->redirect_to_list($enrollment->school_year_id);
+    }
+
+    public function delete($id = 0)
+    {
+        if ($this->input->method(TRUE) !== 'POST') show_404();
+        if ($this->user['level'] !== 'school') $this->access_control->deny('Division learner access is read-only.');
+        $this->access_control->require_permission('learners.edit');
+        $enrollment = $this->School_learner_model->enrollment((int) $id, $this->school->id);
+        if ( ! $enrollment) show_404();
+
+        if ($this->School_learner_model->archive_enrollment($enrollment, $this->school->id, $this->user['id']))
+        {
+            audit_log('archive', 'learners', 'learner_school_records', $enrollment->id, 'Removed learner enrollment from the school list');
+            $this->session->set_flashdata('success', 'Enrollment removed from the learner list.');
+        }
+        else
+        {
+            $this->session->set_flashdata('error', 'Enrollment could not be removed. Check that the school year is open.');
+        }
+
+        $this->redirect_to_list($enrollment->school_year_id);
+    }
+
+    private function redirect_to_list($year_id)
+    {
+        $filters = array('school_year_id' => (int) $year_id);
         foreach (array('q', 'grade_level', 'program', 'per_page', 'sort', 'direction', 'page') as $key)
         {
             $value = $this->input->get($key);

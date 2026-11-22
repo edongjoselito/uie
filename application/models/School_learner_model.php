@@ -265,6 +265,42 @@ class School_learner_model extends CI_Model
         return $enrollment_id;
     }
 
+    public function archive_enrollment($enrollment, $school_id, $uid)
+    {
+        if ( ! $this->db->trans_begin()) return FALSE;
+        $years = $this->db->dbprefix('school_years');
+        $year = $this->db->query("SELECT status FROM `$years` WHERE id = ? FOR UPDATE", array($enrollment->school_year_id))->row();
+        if ( ! $year || $year->status !== 'open') return $this->fail();
+
+        $learners = $this->db->dbprefix('learners');
+        $learner = $this->db->query("SELECT status FROM `$learners` WHERE id = ? FOR UPDATE", array($enrollment->learner_id))->row();
+        if ( ! $learner || $learner->status !== 'active') return $this->fail();
+
+        $record = $this->enrollment($enrollment->id, $school_id);
+        if ( ! $record || (int) $record->school_year_id !== (int) $enrollment->school_year_id
+            || (int) $record->learner_id !== (int) $enrollment->learner_id) return $this->fail();
+
+        $this->db->where('id', $record->id)->where('school_id', $school_id)
+            ->update('learner_school_records', array('status' => 'archived', 'is_current' => 0, 'updated_by' => $uid));
+
+        if ($record->is_current)
+        {
+            $next = $this->db->select('e.id')->from('learner_school_records e')
+                ->join('school_years sy', 'sy.id = e.school_year_id')
+                ->where('e.learner_id', $record->learner_id)->where('e.status', 'active')
+                ->order_by('sy.start_year', 'DESC')->order_by('e.id', 'DESC')->limit(1)->get()->row();
+            if ($next) $this->db->where('id', $next->id)->update('learner_school_records', array('is_current' => 1));
+        }
+
+        $this->db->insert('learner_record_history', array('learner_id' => $record->learner_id,
+            'table_name' => 'learner_school_records', 'record_id' => $record->id, 'change_type' => 'archive',
+            'old_values' => json_encode(array('status' => 'active', 'is_current' => (int) $record->is_current)),
+            'new_values' => json_encode(array('status' => 'archived', 'is_current' => 0)), 'changed_by' => $uid));
+
+        if ( ! $this->db->trans_status() || ! $this->db->trans_commit()) return $this->fail();
+        return TRUE;
+    }
+
     private function fail() { $this->db->trans_rollback(); return FALSE; }
 
     private function save_program_profiles($enrollment_id, $learner_id, $year_id, array $profiles, $uid)

@@ -514,7 +514,9 @@ input[data-uppercase-name] { text-transform: uppercase; }
 .directory-program-tag > i { font-size: .65rem; }
 .directory-no-tags { font-size: .625rem; color: #9aa7b6; }
 .directory-edit { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid #dfe8f1; border-radius: 7px; color: #54799a; text-decoration: none; font-size: .6875rem; white-space: nowrap; }
+.directory-delete { background: #fff; color: #a3313e; border-color: #efcfd3; }
 .directory-edit:hover { background: #edf4fb; color: var(--uie-primary); border-color: #bdd3e6; }
+.directory-delete:hover { background: #fff1f2; color: #8b2531; border-color: #dea3aa; }
 .directory-readonly { color: #93a1b1; font-size: .625rem; white-space: nowrap; }
 .directory-readonly > i { margin-right: 4px; }
 .directory-empty { padding: 46px 20px 50px; text-align: center; }

@@ -88,7 +88,19 @@ $sort_icon = function ($key) use ($sort, $direction) { return $sort === $key ? (
                     </details>
                     <?php endif; ?>
                 </td>
-                <td class="text-end"><?php if ($can_edit): ?><a class="directory-edit" href="<?php echo site_url('learners/edit/'.(int) $row->enrollment_id); ?>" aria-label="<?php echo e('Edit Enrollment for '.$row->first_name.' '.$row->last_name); ?>"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</a><?php else: ?><span class="directory-readonly"><i class="bi bi-lock" aria-hidden="true"></i> View Only</span><?php endif; ?></td>
+                <td class="text-end">
+                    <?php if ($can_edit): ?>
+                    <div class="d-inline-flex flex-wrap justify-content-end gap-2">
+                        <a class="directory-edit" href="<?php echo site_url('learners/edit/'.(int) $row->enrollment_id); ?>" aria-label="<?php echo e('Edit Enrollment for '.$row->first_name.' '.$row->last_name); ?>"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</a>
+                        <?php echo form_open(e(site_url('learners/delete/'.(int) $row->enrollment_id).'?'.http_build_query($list_query + array('page' => $offset))),
+                            array('data-confirm' => 'Remove this enrollment from the selected school year? The learner profile and enrollment history will be kept.')); ?>
+                            <button class="directory-edit directory-delete" type="submit" aria-label="<?php echo e('Delete Enrollment for '.$row->first_name.' '.$row->last_name); ?>"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>
+                        <?php echo form_close(); ?>
+                    </div>
+                    <?php else: ?>
+                        <span class="directory-readonly"><i class="bi bi-lock" aria-hidden="true"></i> View Only</span>
+                    <?php endif; ?>
+                </td>
             </tr><?php endforeach; ?>
             <?php if ( ! $rows): ?><tr><td colspan="7"><div class="directory-empty"><span class="directory-empty-icon"><i class="bi <?php echo $has_filters ? 'bi-search' : 'bi-person-vcard'; ?>" aria-hidden="true"></i></span><h3><?php echo $has_filters ? 'No Matching Learners' : 'Your Learner List Starts Here'; ?></h3><p>No learners match these filters. <?php echo $has_filters ? 'Try a different name, grade, or program to find the record you need.' : 'Choose a school year or encode a learner to get started.'; ?></p><?php if ($has_filters): ?><a class="btn btn-outline-primary btn-sm" href="<?php echo site_url('learners?school_year_id='.(int) $year_id); ?>">Clear Filters</a><?php elseif ($can_create): ?><a class="btn btn-primary btn-sm" href="<?php echo site_url('learners/create?school_year_id='.(int) $year_id); ?>">Encode Learner</a><?php endif; ?></div></td></tr><?php endif; ?>
             </tbody></table>
