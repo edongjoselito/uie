@@ -1,7 +1,7 @@
 <?php
 $report_url = function ($group) use ($year_id, $grade, $district) { return site_url('reports').'?'.http_build_query(array('school_year_id' => (int) $year_id, 'grade_level' => $grade, 'district' => $district, 'group' => $group)); };
 ?>
-<div class="learner-workspace learner-directory directory-refined school-report">
+<div class="learner-workspace learner-workspace-fluid learner-directory directory-refined school-report">
     <header class="learner-page-heading"><div><p class="learner-eyebrow">REPORTS / LEARNER GROUPS</p><h1>Learner Group Reports</h1><p><?php echo $school ? 'A detailed view of your school’s learners by education program.' : 'A detailed view of learners in your '.e($organization_label).' by education program.'; ?></p></div><button class="btn btn-outline-primary report-print" type="button" hidden><i class="bi bi-printer" aria-hidden="true"></i> Print This Page</button></header>
     <div class="directory-context"><span><i class="bi bi-building" aria-hidden="true"></i> <?php echo e($organization_name); ?></span><?php if ($district): ?><span><i class="bi bi-geo-alt" aria-hidden="true"></i> <?php echo e($district); ?></span><?php endif; ?><span><i class="bi bi-calendar3" aria-hidden="true"></i> <?php echo $year ? 'SY '.e($year->year_label) : 'No School Year'; ?></span><span><?php echo e($grade ?: 'All Grade Levels'); ?></span><span>Generated <?php echo e((new DateTimeImmutable('now', new DateTimeZone('Asia/Manila')))->format('M j, Y, g:i A').' PHT'); ?></span></div>
     <section class="directory-filter-card report-filters" aria-label="Report Filters"><form method="get" action="<?php echo site_url('reports'); ?>" class="directory-filters <?php echo $districts ? 'has-district' : ''; ?>">

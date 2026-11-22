@@ -25,7 +25,7 @@ class Reports extends Admin_Controller
         $this->data['breadcrumbs'] = array('Dashboard' => site_url('dashboard'), 'Reports' => NULL);
         $this->render('school/reports/index', array('page_title' => 'Learner Group Reports - UIEIMS',
             'organization_name' => $organization_name, 'organization_label' => $organization_label,
-            'scope' => $scope, 'districts' => $districts, 'district' => $district,
+            'scope' => $scope, 'school' => $school, 'districts' => $districts, 'district' => $district,
             'years' => $years, 'year' => $year, 'year_id' => $year_id, 'grade' => $grade,
             'grades' => School_learner_model::grades(), 'groups' => $groups, 'selected_group' => $selected_group,
             'summary' => $summary, 'sections' => $sections));

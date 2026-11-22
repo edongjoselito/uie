@@ -12,7 +12,7 @@ $profile_selected = function ($program, $field, $id) use ($profile_data) {
 $selected_year_label = 'Not selected';
 foreach ($years as $sy) if ((int) $sy->id === (int) $year_id) $selected_year_label = $sy->year_label;
 ?>
-<div class="learner-workspace">
+<div class="learner-workspace<?php echo $enrollment ? ' learner-workspace-fluid' : ''; ?>">
     <a class="learner-back" href="<?php echo site_url('learners?school_year_id='.(int) $year_id); ?>"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to learner profiles</a>
     <header class="learner-page-heading">
         <div><p class="learner-eyebrow">LEARNERS / PROFILE</p><h1><?php echo $enrollment ? 'Edit Enrollment' : 'Add a Learner'; ?></h1><p>Every learner, a place to belong. Record their details and programs for the school year.</p></div>

@@ -75,6 +75,49 @@ class Learners extends Admin_Controller
         $this->form($enrollment);
     }
 
+    public function program_tags($id = 0)
+    {
+        if ($this->input->method(TRUE) !== 'POST') show_404();
+        if ($this->user['level'] !== 'school') $this->access_control->deny('Division learner access is read-only.');
+        $this->access_control->require_permission('learners.edit');
+        $enrollment = $this->School_learner_model->enrollment((int) $id, $this->school->id);
+        if ( ! $enrollment) show_404();
+
+        $tags = $this->input->post('programs') ?? array();
+        if ( ! $this->valid_program_tags($tags))
+        {
+            $this->session->set_flashdata('error', 'Select valid program tags.');
+        }
+        elseif ($this->School_learner_model->save($this->school->id, (int) $enrollment->school_year_id,
+            $enrollment->learner_id, array(), NULL, $tags, $this->user['id'], $enrollment->id))
+        {
+            audit_log('update', 'learners', 'learner_school_records', $enrollment->id, 'Updated learner program tags');
+            $this->session->set_flashdata('success', 'Program tags saved.');
+        }
+        else
+        {
+            $this->session->set_flashdata('error', 'Program tags could not be saved. Check that the school year is open.');
+        }
+
+        $filters = array('school_year_id' => (int) $enrollment->school_year_id);
+        foreach (array('q', 'grade_level', 'program', 'per_page', 'sort', 'direction', 'page') as $key)
+        {
+            $value = $this->input->get($key);
+            if (is_string($value)) $filters[$key] = $value;
+        }
+        redirect('learners?'.http_build_query($filters), 'location', 303);
+    }
+
+    private function valid_program_tags($tags)
+    {
+        if ( ! is_array($tags) || count($tags) > count(programs())) return FALSE;
+        foreach ($tags as $tag)
+        {
+            if ( ! is_string($tag) || ! programs($tag)) return FALSE;
+        }
+        return TRUE;
+    }
+
     private function division_index()
     {
         $per_page = 25;
@@ -136,8 +179,7 @@ class Learners extends Admin_Controller
             }
             $tags = $this->input->post('programs');
             if ($tags === NULL) $tags = array();
-            $tags_valid = is_array($tags) && count($tags) <= 4;
-            if ($tags_valid) foreach ($tags as $tag) if ( ! is_string($tag) || ! programs($tag)) $tags_valid = FALSE;
+            $tags_valid = $this->valid_program_tags($tags);
             if ( ! $tags_valid) $error = 'Select valid program tags.';
             $posted_profiles = $this->input->post('profiles');
             if ( ! is_array($posted_profiles)) $posted_profiles = array();
@@ -312,9 +354,16 @@ class Learners extends Admin_Controller
                             $payload['rows'][$i]['status_message'] = $status['message'];
                             if ($status['status'] === 'error') $payload['rows'][$i]['valid'] = FALSE;
                         }
-                        $this->session->set_userdata('sf1_import_token', $token);
-                        file_put_contents(APPPATH.'cache/sf1_import_'.$token.'.json', json_encode($payload), LOCK_EX);
-                        $preview = $payload + array('token' => $token, 'filename' => $file['name'], 'year_label' => $year->year_label);
+                        $encoded = json_encode($payload);
+                        if ($encoded === FALSE || @file_put_contents(APPPATH.'cache/sf1_import_'.$token.'.json', $encoded, LOCK_EX) !== strlen($encoded))
+                        {
+                            $error = 'The import preview could not be saved. Please try again.';
+                        }
+                        else
+                        {
+                            $this->session->set_userdata('sf1_import_token', $token);
+                            $preview = $payload + array('token' => $token, 'filename' => $file['name'], 'year_label' => $year->year_label);
+                        }
                     }
                 }
             }
@@ -401,32 +450,12 @@ class Learners extends Admin_Controller
     {
         if ($this->user['level'] !== 'school') $this->access_control->deny('Division learner access is read-only.');
         $this->access_control->require_permission('learners.import');
-        require_once FCPATH.'vendor/autoload.php';
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('SF 1');
-        $headers = array('LRN', 'Last Name', 'First Name', 'Middle Name', 'Extension Name', 'Sex',
-            'Birth Date (mm/dd/yyyy)', 'Mother Tongue', 'IP (Ethnic Group)', 'Religion',
-            'House No./Street/Sitio', 'Barangay', 'Municipality/City', 'Province',
-            "Father's Name", "Mother's Maiden Name", "Guardian's Name", 'Relationship', 'Contact Number', 'Remarks');
-        foreach ($headers as $i => $label)
-        {
-            $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i + 1);
-            $sheet->setCellValue($col.'1', $label);
-            $sheet->getColumnDimension($col)->setWidth(max(14, strlen($label) + 2));
-        }
-        $sheet->getStyle('A1:T1')->getFont()->setBold(TRUE);
-        $sheet->getCell('A2')->setValueExplicit('123456789012', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-        $sheet->setCellValue('B2', 'DELA CRUZ');
-        $sheet->setCellValue('C2', 'JUAN');
-        $sheet->setCellValue('F2', 'M');
-        $sheet->setCellValue('G2', '01/15/2016');
+        $template = APPPATH.'templates/School-Form-1-SF1.xlsx';
         while (ob_get_level()) ob_end_clean();
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="sf1_import_template.xlsx"');
+        header('Content-Disposition: attachment; filename="School-Form-1-SF1.xlsx"');
         header('Cache-Control: private, no-store');
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $writer->save('php://output');
+        readfile($template);
         exit;
     }
 

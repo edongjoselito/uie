@@ -900,17 +900,17 @@ INSERT INTO uie_permissions (module, name, slug) VALUES
 
 -- Role-permission mapping
 INSERT INTO uie_role_permissions (role_id, permission_id)
-SELECT 1, id FROM uie_permissions;                                                    -- superadmin: all
+SELECT (SELECT id FROM uie_roles WHERE slug = 'superadmin'), id FROM uie_permissions;                                                    -- superadmin: all
 
 INSERT INTO uie_role_permissions (role_id, permission_id)
-SELECT 2, id FROM uie_permissions WHERE slug IN (
+SELECT (SELECT id FROM uie_roles WHERE slug = 'regional_admin'), id FROM uie_permissions WHERE slug IN (
   'dashboard.view','uie_learners.view','uie_learners.export','uie_learners.print',
   'uie_regions.view','uie_divisions.view','uie_schools.view','uie_school_years.view',
   'submissions.view','submissions.review','submissions.return',
   'reports.view','reports.export','sned.sensitive','profile.edit');                -- regional_admin
 
 INSERT INTO uie_role_permissions (role_id, permission_id)
-SELECT 3, id FROM uie_permissions WHERE slug IN (
+SELECT (SELECT id FROM uie_roles WHERE slug = 'division_admin'), id FROM uie_permissions WHERE slug IN (
   'dashboard.view','uie_learners.view','uie_learners.create','uie_learners.edit',
   'uie_learners.export','uie_learners.print','uie_learners.archive',
   'uie_schools.view','uie_school_years.view',
@@ -918,29 +918,29 @@ SELECT 3, id FROM uie_permissions WHERE slug IN (
   'reports.view','reports.export','sned.sensitive','profile.edit');                -- division_admin
 
 INSERT INTO uie_role_permissions (role_id, permission_id)
-SELECT 4, id FROM uie_permissions WHERE slug IN (
+SELECT (SELECT id FROM uie_roles WHERE slug = 'school_admin'), id FROM uie_permissions WHERE slug IN (
   'dashboard.view','uie_learners.view','uie_learners.create','uie_learners.edit',
   'uie_learners.import','uie_learners.export','uie_learners.print',
   'submissions.view','submissions.submit','reports.view','reports.export',
   'uie_school_years.view','profile.edit');                                             -- school_admin
 
 INSERT INTO uie_role_permissions (role_id, permission_id)
-SELECT 5, id FROM uie_permissions WHERE slug IN (
+SELECT (SELECT id FROM uie_roles WHERE slug = 'school_encoder'), id FROM uie_permissions WHERE slug IN (
   'dashboard.view','uie_learners.view','uie_learners.create','uie_learners.edit',
   'submissions.view','uie_school_years.view','profile.edit');                          -- school_encoder
 
 INSERT INTO uie_role_permissions (role_id, permission_id)
-SELECT 6, id FROM uie_permissions WHERE slug IN (
+SELECT (SELECT id FROM uie_roles WHERE slug = 'regional_viewer'), id FROM uie_permissions WHERE slug IN (
   'dashboard.view','uie_learners.view','uie_regions.view','uie_divisions.view','uie_schools.view',
   'submissions.view','reports.view','uie_school_years.view','profile.edit');           -- regional_viewer
 
 INSERT INTO uie_role_permissions (role_id, permission_id)
-SELECT 7, id FROM uie_permissions WHERE slug IN (
+SELECT (SELECT id FROM uie_roles WHERE slug = 'division_viewer'), id FROM uie_permissions WHERE slug IN (
   'dashboard.view','uie_learners.view','uie_schools.view',
   'submissions.view','reports.view','uie_school_years.view','profile.edit');           -- division_viewer
 
 INSERT INTO uie_role_permissions (role_id, permission_id)
-SELECT 8, id FROM uie_permissions WHERE slug IN (
+SELECT (SELECT id FROM uie_roles WHERE slug = 'school_viewer'), id FROM uie_permissions WHERE slug IN (
   'dashboard.view','uie_learners.view','submissions.view',
   'reports.view','uie_school_years.view','profile.edit');                              -- school_viewer
 
@@ -955,7 +955,8 @@ INSERT INTO uie_users (username, email, password_hash, first_name, last_name, po
 VALUES ('admin', 'admin@uie.local',
         '$2y$10$IzouP.HfvnrKhSUryueGWuYQUrdt6mrfxzrtoPfaY0W0.bJqtbrM6',
         'System', 'Administrator', 'Super Administrator', 'active');
-INSERT INTO uie_user_roles (user_id, role_id) VALUES (1, 1);
+INSERT INTO uie_user_roles (user_id, role_id)
+VALUES (LAST_INSERT_ID(), (SELECT id FROM uie_roles WHERE slug = 'superadmin'));
 
 -- System settings
 INSERT INTO uie_system_settings (setting_key, setting_value, description) VALUES

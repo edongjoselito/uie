@@ -185,10 +185,12 @@ class School_learner_model extends CI_Model
     }
 
     /** Save an enrollment and its tags as one transaction, preserving other years. */
-    public function save($school_id, $year_id, $learner_id, array $identity, array $placement, array $tags, $uid, $enrollment_id = NULL, array $profiles = array())
+    public function save($school_id, $year_id, $learner_id, array $identity, ?array $placement, array $tags, $uid, $enrollment_id = NULL, array $profiles = array())
     {
-        if ( ! $school_id || ! $year_id || ! $uid || ! isset($placement['grade_level'])
-            || ! in_array($placement['grade_level'], self::grades(), TRUE)
+        // A null placement updates only the tags on an existing enrollment.
+        if ( ! $school_id || ! $year_id || ! $uid
+            || ($placement === NULL && ! $enrollment_id)
+            || ($placement !== NULL && ! in_array($placement['grade_level'] ?? NULL, self::grades(), TRUE))
             || array_diff($tags, array('sned', 'madrasah', 'iped', 'spfl'))) return FALSE;
         $this->db->trans_begin();
         $school = $this->db->where('id', $school_id)->where('status', 'active')->get('schools')->row();
@@ -226,7 +228,11 @@ class School_learner_model extends CI_Model
         $existing = $this->db->where('learner_id', $learner_id)->where('school_id', $school_id)
             ->where('school_year_id', $year_id)->get('learner_school_records')->row();
         if ( ! $enrollment_id && $existing) return $this->fail();
-        $data = array('grade_level' => $placement['grade_level'], 'section' => $placement['section'], 'updated_by' => $uid);
+        $data = array('updated_by' => $uid);
+        if ($placement !== NULL)
+        {
+            $data += array('grade_level' => $placement['grade_level'], 'section' => $placement['section']);
+        }
         if ($enrollment_id)
         {
             $old_tags = $this->tags($enrollment_id);

@@ -52,14 +52,14 @@
                         <label for="login-username">Username or Email</label>
                         <div class="login-input-wrap">
                             <i class="bi bi-person" aria-hidden="true"></i>
-                            <input id="login-username" type="text" name="username" value="<?php echo e(set_value('username', '', FALSE)); ?>" placeholder="e.g. dcnhs.encoder" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="120" required autofocus>
+                            <input id="login-username" type="text" name="username" value="<?php echo e(set_value('username', '', FALSE)); ?>" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="120" required autofocus>
                         </div>
                     </div>
                     <div class="login-field">
                         <label for="login-password">Password</label>
                         <div class="login-input-wrap">
                             <i class="bi bi-lock" aria-hidden="true"></i>
-                            <input id="login-password" type="password" name="password" placeholder="Enter your password" autocomplete="current-password" aria-describedby="login-caps" required>
+                            <input id="login-password" type="password" name="password" autocomplete="current-password" aria-describedby="login-caps" required>
                             <button class="login-password-toggle" type="button" aria-label="Show password" aria-controls="login-password" aria-pressed="false" hidden><i class="bi bi-eye" aria-hidden="true"></i></button>
                         </div>
                     </div>

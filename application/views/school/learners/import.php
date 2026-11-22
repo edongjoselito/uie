@@ -10,7 +10,7 @@ $status_badge = function ($status) {
     return '<span class="badge text-bg-'.$entry[1].'">'.e($entry[0]).'</span>';
 };
 ?>
-<div class="learner-workspace">
+<div class="learner-workspace learner-workspace-fluid">
     <a class="learner-back" href="<?php echo site_url('learners'); ?>"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to learner profiles</a>
     <header class="learner-page-heading">
         <div><p class="learner-eyebrow">LEARNERS / PROFILE</p><h1>Import SF 1 · School Register</h1><p>Upload the class register to create learner profiles and enrollments in one pass.</p></div>
@@ -19,10 +19,15 @@ $status_badge = function ($status) {
     <?php if ($error): ?><div class="alert alert-danger" role="alert"><?php echo e($error); ?></div><?php endif; ?>
 
     <?php if ( ! $preview): ?>
-    <div class="learner-entry-layout">
+    <div class="learner-entry-layout sf1-import-layout">
         <div class="learner-entry-sections">
             <section class="learner-entry-card" aria-labelledby="upload-title">
-                <div class="learner-section-heading"><span class="learner-step">01</span><div><h2 id="upload-title">Upload the Register</h2><p>The official SF 1 workbook is detected by its column headers. Both the two-row merged header and a flat header row work.</p></div><i class="bi bi-file-earmark-spreadsheet learner-section-icon" aria-hidden="true"></i></div>
+                <div class="learner-section-heading sf1-upload-heading">
+                    <div><h2 id="upload-title">Upload the Register</h2><p>Choose the school year and grade level for this register.</p></div>
+                    <a class="btn btn-outline-primary sf1-template-link" href="<?php echo site_url('learners/sf1_template'); ?>">
+                        <i class="bi bi-download" aria-hidden="true"></i> Download Template
+                    </a>
+                </div>
                 <div class="learner-section-body">
                     <?php echo form_open_multipart('learners/import', array('class' => 'learner-entry-form')); ?>
                     <input type="hidden" name="import_stage" value="preview">
@@ -32,8 +37,7 @@ $status_badge = function ($status) {
                         </select><div class="form-text">Open years only.</div></div>
                         <div class="col-md-4"><label for="grade-level" class="form-label">Grade Level <span class="learner-required" aria-hidden="true">*</span></label><select id="grade-level" name="grade_level" class="form-select" required><option value="">Select grade level</option><?php foreach ($grades as $grade): ?><option <?php echo set_select('grade_level', $grade); ?>><?php echo e($grade); ?></option><?php endforeach; ?></select><div class="form-text">Applied to every imported row.</div></div>
                         <div class="col-md-4"><label for="section" class="form-label">Section <span class="learner-optional">Optional</span></label><input id="section" name="section" class="form-control" maxlength="60" value="<?php echo e(set_value('section')); ?>" placeholder="e.g., Rizal"></div>
-                        <div class="col-md-8"><label for="sf1-file" class="form-label">SF 1 Spreadsheet <span class="learner-required" aria-hidden="true">*</span></label><input id="sf1-file" name="sf1_file" type="file" class="form-control" accept=".xlsx,.xls,.csv" required><div class="form-text">.xlsx, .xls, or .csv · up to 8 MB · up to <?php echo (int) Sf1_import::MAX_ROWS; ?> rows.</div></div>
-                        <div class="col-md-4 d-flex align-items-end"><a class="btn btn-outline-secondary w-100" href="<?php echo site_url('learners/sf1_template'); ?>"><i class="bi bi-download" aria-hidden="true"></i> Download Template</a></div>
+                        <div class="col-12"><label for="sf1-file" class="form-label">SF 1 Spreadsheet <span class="learner-required" aria-hidden="true">*</span></label><input id="sf1-file" name="sf1_file" type="file" class="form-control" accept=".xlsx,.xls,.csv" required><div class="form-text">.xlsx, .xls, or .csv · up to 8 MB · up to <?php echo (int) Sf1_import::MAX_ROWS; ?> rows.</div></div>
                         <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" name="tag_iped" id="tag-iped" value="1" <?php echo set_checkbox('tag_iped', '1'); ?>><label class="form-check-label" for="tag-iped">Tag learners with an <strong>IP (Ethnic Group)</strong> entry as <strong>IPEd</strong> for this enrollment</label><div class="form-text">Program-specific details can be completed afterwards by editing the enrollment.</div></div></div>
                     </div>
                     <div class="learner-form-actions"><span><i class="bi bi-shield-lock" aria-hidden="true"></i> Review happens before anything is saved.</span><div><a class="btn learner-cancel" href="<?php echo site_url('learners'); ?>">Cancel</a><button class="btn btn-primary learner-save" type="submit"><i class="bi bi-eye" aria-hidden="true"></i> Review file</button></div></div>
@@ -41,14 +45,33 @@ $status_badge = function ($status) {
                 </div>
             </section>
         </div>
-        <aside class="learner-summary" aria-labelledby="columns-title">
-            <div class="learner-summary-heading"><span class="learner-summary-icon"><i class="bi bi-layout-three-columns" aria-hidden="true"></i></span><h2 id="columns-title">Expected Columns</h2><p>Kept aligned with SF 1.</p></div>
-            <ul class="sf1-column-list">
-                <li>LRN</li><li>Last · First · Middle · Extension Name</li><li>Sex · Birth Date</li>
-                <li>Mother Tongue · IP (Ethnic Group) · Religion</li><li>Address: Street/Sitio · Barangay · Municipality · Province</li>
-                <li>Father · Mother (Maiden) · Guardian · Relationship</li><li>Contact Number · Remarks</li>
-            </ul>
-            <div class="learner-summary-note"><i class="bi bi-shield-check" aria-hidden="true"></i><p>Learners are matched by LRN, or by exact name + birth date within your school. Records registered at another school are skipped and reported.</p></div>
+        <aside class="sf1-guide" aria-labelledby="columns-title">
+            <div class="sf1-guide-heading">
+                <span class="sf1-guide-icon"><i class="bi bi-layout-three-columns" aria-hidden="true"></i></span>
+                <h2 id="columns-title">Expected Columns</h2>
+            </div>
+
+            <div class="sf1-guide-body">
+                <div class="sf1-name-format">
+                    <h3>Learner name <span>One column</span></h3>
+                    <p class="sf1-name-order">Last Name, First Name, Middle Name</p>
+                    <p class="sf1-name-example">DELA CRUZ, JUAN MIGUEL, DE LOS SANTOS</p>
+                    <p>Leave the middle name blank if it doesn’t apply.</p>
+                </div>
+
+                <dl class="sf1-column-groups" aria-label="Other template columns">
+                    <div><dt><i class="bi bi-person-vcard" aria-hidden="true"></i>Learner details</dt><dd>LRN, sex, birth date, birth place</dd></div>
+                    <div><dt><i class="bi bi-chat-square-text" aria-hidden="true"></i>Language and background</dt><dd>Mother tongue, IP (ethnic group), religion</dd></div>
+                    <div><dt><i class="bi bi-geo-alt" aria-hidden="true"></i>Address</dt><dd>Street or sitio, barangay, municipality or city, province</dd></div>
+                    <div><dt><i class="bi bi-people" aria-hidden="true"></i>Family and contact</dt><dd>Father’s name, mother’s maiden name, guardian’s name and relationship, contact number</dd></div>
+                    <div><dt><i class="bi bi-journal-text" aria-hidden="true"></i>Remarks</dt><dd>Use the codes from the template’s legend.</dd></div>
+                </dl>
+
+                <div class="sf1-matching-note">
+                    <i class="bi bi-shield-check" aria-hidden="true"></i>
+                    <div><h3>How records are matched</h3><p>We match by LRN, or by exact name and birth date within your school. Learners registered at another school are skipped and reported.</p></div>
+                </div>
+            </div>
         </aside>
     </div>
 

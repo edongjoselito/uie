@@ -1,4 +1,4 @@
-<div class="learner-workspace learner-directory directory-refined">
+<div class="learner-workspace learner-workspace-fluid learner-directory directory-refined">
     <header class="learner-page-heading">
         <div>
             <p class="learner-eyebrow">DIVISION / LEARNERS</p>

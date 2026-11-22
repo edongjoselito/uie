@@ -17,6 +17,26 @@ class MY_Controller extends CI_Controller
     public function __construct()
     {
         parent::__construct();
+        $this->load->library('database_bootstrap');
+        $loopback = array('127.0.0.1', '::1');
+        $local_development = ENVIRONMENT === 'development'
+            && in_array($_SERVER['SERVER_ADDR'] ?? '', $loopback, TRUE)
+            && in_array($_SERVER['REMOTE_ADDR'] ?? '', $loopback, TRUE);
+        $db_debug = $this->db->db_debug;
+        $this->db->db_debug = FALSE;
+        try
+        {
+            $this->database_bootstrap->initialize($this->db, $local_development);
+        }
+        catch (Throwable $error)
+        {
+            log_message('error', 'Database setup failed: '.$error->getMessage());
+            show_error('Database setup failed. Check the application and database logs.', 503);
+        }
+        finally
+        {
+            $this->db->db_debug = $db_debug;
+        }
         $this->user = $this->access_control->user();
 
         $this->data['user']        = $this->user;

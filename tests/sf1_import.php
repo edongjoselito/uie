@@ -83,6 +83,43 @@ $flat_parsed = $parser->parse($flat_path);
 check($flat_parsed['ok'] && count($flat_parsed['rows']) === 1 && $flat_parsed['rows'][0]['fields']['guardian_relationship'] === 'Guardian',
     'Flat single-row header parses');
 
+// Fill the workbook served by the download endpoint.
+$official = \PhpOffice\PhpSpreadsheet\IOFactory::load(APPPATH.'templates/School-Form-1-SF1.xlsx');
+$sheet = $official->getActiveSheet();
+$sheet->setCellValue('C10', 'DELA CRUZ, JUAN MIGUEL, DE LOS SANTOS');
+$sheet->setCellValue('G10', 'M');
+$sheet->setCellValue('H10', '1/15/2016');
+$sheet->setCellValue('J10', 'Davao del Sur');
+$sheet->setCellValue('O10', 'Purok 1');
+$sheet->setCellValue('P10', 'Poblacion');
+$sheet->setCellValue('T10', 'DELA CRUZ, PEDRO, REYES');
+$sheet->setCellValue('V10', 'DE LOS SANTOS, MARIA, RAMOS');
+$sheet->setCellValue('X10', 'RAMOS, ELENA, GARCIA');
+$sheet->setCellValue('Y10', 'Aunt');
+$sheet->setCellValue('C11', 'PEÑA, ANA MARIA,');
+$sheet->setCellValue('G11', 'F');
+$sheet->setCellValue('H11', '03/20/2016');
+$sheet->setCellValue('C12', 'Unseparated Name');
+$sheet->setCellValue('G12', 'M');
+$sheet->setCellValue('H12', '01/15/2016');
+$official_path = $tmp.'_official.xlsx';
+(new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($official))->save($official_path);
+$official->disconnectWorksheets();
+$register = $parser->parse($official_path);
+unlink($official_path);
+check($register['ok'] && $register['meta']['header_row'] === 8 && count($register['rows']) === 3,
+    'Download template parses without counting empty rows or the remarks legend');
+$name = $register['rows'][0]['fields'];
+check($register['rows'][0]['valid'] && $name['last_name'] === 'DELA CRUZ' && $name['first_name'] === 'JUAN MIGUEL'
+    && $name['middle_name'] === 'DE LOS SANTOS' && $name['place_of_birth'] === 'Davao del Sur'
+    && $name['address'] === 'Purok 1' && $name['barangay'] === 'Poblacion'
+    && $name['father_name'] === 'DELA CRUZ, PEDRO, REYES' && $name['mother_name'] === 'DE LOS SANTOS, MARIA, RAMOS'
+    && $name['guardian_name'] === 'RAMOS, ELENA, GARCIA' && $name['guardian_relationship'] === 'Aunt',
+    'Comma-delimited names and grouped SF 1 fields map correctly');
+check($register['rows'][1]['valid'] && $register['rows'][1]['fields']['first_name'] === 'ANA MARIA'
+    && $register['rows'][1]['fields']['middle_name'] === '', 'Blank middle name preserves the complete first name');
+check( ! $register['rows'][2]['valid'], 'Names without comma separators are flagged for review');
+
 // ---------------------------------------------------------------------
 // Import into a temporary school year and verify records.
 // ---------------------------------------------------------------------
@@ -113,10 +150,12 @@ try {
     $result = $model->import_row($school, $year_id, $parsed['rows'][0]['fields'], 'Grade 3', 'Rizal', array('iped'), $uid,
         array('iped' => array('ethnic_group_id' => (int) $dbh->select('id')->where('status', 'active')->limit(1)->get('iped_ethnic_groups')->row('id'))));
     check($result['result'] === 'created', 'Row 1 creates learner + enrollment');
-    $enrollment = $model->enrollment($dbh->select('id')->where('lrn', '106123450001')->get('learner_school_records')->row('id'), $school);
-    check($enrollment && $enrollment->grade_level === 'Grade 3' && $enrollment->section === 'Rizal', 'Enrollment placement saved');
-    $lid = $enrollment->learner_id;
+    $lid = $dbh->select('id')->where('lrn', '106123450001')->get('learners')->row('id');
     $learners[] = $lid;
+    $enrollment_id = $dbh->select('id')->where('learner_id', $lid)->where('school_year_id', $year_id)
+        ->get('learner_school_records')->row('id');
+    $enrollment = $model->enrollment($enrollment_id, $school);
+    check($enrollment && $enrollment->grade_level === 'Grade 3' && $enrollment->section === 'Rizal', 'Enrollment placement saved');
     $stored = $dbh->where('id', $lid)->get('learners')->row();
     check($stored->mother_tongue === 'Cebuano' && $stored->ip_ethnicity === 'Manobo' && $stored->religion === 'Catholic'
         && $stored->barangay === 'Poblacion' && $stored->father_name === 'DELA CRUZ, PEDRO',
@@ -131,13 +170,15 @@ try {
     check($enrollment->section === 'NewSection' && $model->tags($enrollment->id) === array('iped'), 'Section updated, existing tag preserved');
     check($dbh->where('learner_id', $lid)->count_all_results('learner_school_records') === 1, 'No duplicate enrollment created');
 
-    // Second learner enrolled next year via name+DOB match is not exercised here;
-    // a row with no LRN creates a new learner and matches on re-import.
-    $result = $model->import_row($school, $year_id, $parsed['rows'][2]['fields'], 'Grade 3', 'Rizal', array(), $uid);
+    // A row from the download template can be imported without an LRN.
+    $result = $model->import_row($school, $year_id, $name, 'Grade 3', 'Rizal', array(), $uid);
     check($result['result'] === 'created', 'Row without LRN creates a learner');
-    $no_lrn_id = $dbh->select('id')->where('lrn IS NULL', NULL, FALSE)->where('last_name', 'BAUTISTA')->get('learners')->row('id');
-    $learners[] = $no_lrn_id;
-    $status = $model->preview_status($school, $year_id, $parsed['rows'][2]['fields']);
+    $stored = $dbh->where('lrn IS NULL', NULL, FALSE)->where('last_name', $name['last_name'])
+        ->where('first_name', $name['first_name'])->get('learners')->row();
+    if ($stored) $learners[] = $stored->id;
+    check($stored && $stored->middle_name === 'DE LOS SANTOS' && $stored->place_of_birth === 'Davao del Sur',
+        'Names and birth place from the download template persist');
+    $status = $model->preview_status($school, $year_id, $name);
     check($status['status'] === 'update', 'Name + birth-date match detected on re-import preview');
 
     // Guard rails: LRN registered at another school and name/LRN conflicts are rejected.

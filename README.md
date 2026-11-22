@@ -20,15 +20,12 @@ Operating identity: **DepEd Region XI – Davao Region**.
 ## Setup
 
 1. **Requirements**: XAMPP PHP 8.2+, MySQL 8+, Apache mod_rewrite.
-   All 42 tables use the **`uie_` prefix** (`dbprefix` in `database.php`).
-2. **Database**:
-   ```bash
-   mysql -h127.0.0.1 -uroot -p < db/schema.sql
-   mysql -h127.0.0.1 -uroot -p < db/seed_region11.sql
-   ```
-3. **DB credentials**: `application/config/database.php` (default `root` / `moth34board`).
-4. **Base URL**: `application/config/config.php` → `$config['base_url']`.
-5. Browse `https://localhost/uie/` — sign in (see **`DEFAULT_ACCOUNTS.md`** for all seeded accounts; default `admin` / `Admin@123`).
+   Tables use the `uie_` prefix (`dbprefix` in `database.php`).
+2. Create an empty database if needed and configure the connection in `application/config/database.php`.
+   The database account needs permission to create tables and insert the setup data.
+3. Set the base URL in `application/config/config.php`.
+4. Open `https://localhost/uie/login`. The app creates missing tables and, for local
+   development with an empty user table, seeds the accounts in [DEFAULT_ACCOUNTS.md](DEFAULT_ACCOUNTS.md).
 
 ## Directory map
 
@@ -142,12 +139,13 @@ mysql -h127.0.0.1 -uroot -p uie_db < db/migrations/20261122_spfl_learner_profile
 
 Accounts with `learners.import` (school admins) can open **Learners →
 Import SF 1** or `/learners/import` to upload the class register (.xlsx, .xls,
-or .csv, up to 8 MB / 500 rows). The parser detects the official two-row merged
-header or a flat header row and maps LRN, the four name columns, sex, birth
-date (mm/dd/yyyy, including Excel serials), mother tongue, IP ethnic group,
-religion, the four address columns, parent/guardian names and relationship,
-contact number, and remarks. A blank template matching the expected layout is
-downloadable from the upload page.
+or .csv, up to 8 MB / 500 rows). Download the blank school register from the
+upload page and enter each learner's name in one cell as
+`Last Name, First Name, Middle Name`. Leave the middle name blank when it
+does not apply. The importer also accepts earlier templates with separate
+name columns. It reads the two-row merged header or a flat header and maps
+LRN, name, sex, birth date and place, mother tongue, IP ethnic group, religion,
+address, parent and guardian details, contact number, and remarks.
 
 Uploading only shows a **review screen** first — nothing is saved. Each row is
 classified: new learner, existing school record (adds the year's enrollment),

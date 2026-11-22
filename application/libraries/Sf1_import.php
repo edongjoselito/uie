@@ -21,19 +21,20 @@ class Sf1_import
             'first_name' => array('firstname', 'givenname', 'learnerfirstname', 'pangalan'),
             'middle_name' => array('middlename', 'learnermiddlename', 'gitnangpangalan', 'mi'),
             'extension_name' => array('extensionname', 'nameextension', 'extension', 'extname', 'suffixname', 'suffix'),
-            'full_name' => array('name', 'learnername', 'learnersname', 'nameoflearner', 'fullname'),
-            'sex' => array('sex', 'gender', 'mf', 'mfemale', 'kasarian'),
+            'full_name' => array('name', 'learnername', 'learnersname', 'nameoflearner', 'fullname', 'namelastnamefirstnamemiddlename'),
+            'sex' => array('sex', 'sexmf', 'gender', 'mf', 'mfemale', 'kasarian'),
             'date_of_birth' => array('birthdate', 'birthdatemmddyyyy', 'dateofbirth', 'dob', 'birthday', 'birthdatemmddyy', 'petsangkapanganakan', 'kapanganakan'),
+            'place_of_birth' => array('birthplace', 'birthplaceprovince', 'placeofbirth', 'placeofbirthprovince'),
             'mother_tongue' => array('mothertongue', 'mt', 'mothertonguelanguage', 'wikangginagamitsabahay'),
             'ip_ethnicity' => array('ip', 'ipethnicgroup', 'ipethnicity', 'ethnicgroup', 'indigenouspeoples', 'ipeethnicgroup', 'ipgroup', 'ethnicity'),
             'religion' => array('religion', 'religiousaffiliation', 'relihiyon'),
-            'address' => array('housenostreetsitio', 'housenostreetsitiopurok', 'housestreet', 'housenostreet', 'housenumberstreet', 'street', 'sitio', 'address', 'addressstreet', 'housenostreetbarangay'),
+            'address' => array('housenostreetsitio', 'housenostreetsitiopurok', 'housestreetsitiopurok', 'housestreet', 'housenostreet', 'housenumberstreet', 'street', 'sitio', 'address', 'addressstreet', 'housenostreetbarangay'),
             'barangay' => array('barangay', 'brgy', 'baranggay'),
             'municipality' => array('municipalitycity', 'municipality', 'citymunicipality', 'towncity', 'town', 'city', 'mun'),
             'province' => array('province', 'lalawigan'),
-            'father_name' => array('fathersname', 'fathername', 'father', 'fathersnamelastfirstmiddle', 'fatherfullname'),
-            'mother_name' => array('mothersmaidenname', 'mothersname', 'mothername', 'mothermaidenname', 'maidenname', 'mother', 'mothersmaidennameklastfirstmiddle', 'motherfullname'),
-            'guardian_name' => array('guardianname', 'guardiansname', 'nameofguardian', 'guardian', 'guardiansfullname', 'guardiannameifnotparents'),
+            'father_name' => array('fathersname', 'fathername', 'father', 'fathersnamelastfirstmiddle', 'fathersnamelastnamefirstnamemiddlename', 'fatherfullname'),
+            'mother_name' => array('mothersmaidenname', 'mothersname', 'mothername', 'mothermaidenname', 'maidenname', 'mother', 'mothersmaidennameklastfirstmiddle', 'mothersmaidennamelastnamefirstnamemiddlename', 'motherfullname'),
+            'guardian_name' => array('guardianname', 'guardiansname', 'nameofguardian', 'guardian', 'guardiansfullname', 'guardiannameifnotparents', 'guardianifnotparent'),
             'contact_number' => array('contactnumber', 'contactnumberofparentguardian', 'contactnumberofparentorguardian', 'contactno', 'contact', 'contactnumberofguardian', 'telephonenumber', 'mobilenumber', 'cellnumber', 'contactnumberofparent', 'guardiancontactnumber'),
             'guardian_relationship' => array('relationship', 'guardianrelationship', 'relationshiptothelearner', 'rel'),
             'remarks' => array('remarks', 'remark', 'notes', 'indicators'),
@@ -47,6 +48,12 @@ class Sf1_import
      */
     public function parse($filepath)
     {
+        $autoload = FCPATH.'vendor/autoload.php';
+        if ( ! is_file($autoload))
+        {
+            return $this->error('Spreadsheet import is unavailable because the application dependencies are missing.');
+        }
+        require_once $autoload;
         $grid = $this->read_grid($filepath);
         if ($grid === FALSE)
         {
@@ -58,12 +65,13 @@ class Sf1_import
         {
             return $this->error('No SF 1 header row was found. The sheet should contain columns named LRN and learner name / birth date. Download the template for the expected layout.');
         }
-        list($header_row, $map) = $found;
-        if ( ! isset($map['last_name']) && ! isset($map['first_name']) && ! isset($map['full_name']))
+        list($header_row, $map, $grouped) = $found;
+        if ( ! in_array('full_name', $map, TRUE)
+            && ( ! in_array('last_name', $map, TRUE) || ! in_array('first_name', $map, TRUE)))
         {
-            return $this->error('The learner name columns could not be identified. Keep the SF 1 column headers (Last Name, First Name, Middle Name, Extension Name).');
+            return $this->error('The learner name columns could not be identified. Keep the SF 1 Name header and enter names as Last Name, First Name, Middle Name.');
         }
-        if ( ! isset($map['sex']) || ! isset($map['date_of_birth']))
+        if ( ! in_array('sex', $map, TRUE) || ! in_array('date_of_birth', $map, TRUE))
         {
             return $this->error('The Sex and Birth Date columns are required. Keep the standard SF 1 column headers.');
         }
@@ -74,15 +82,17 @@ class Sf1_import
 
         $rows = array();
         $seen = array();
-        $labels = array();
-        foreach (self::column_aliases() as $field => $aliases) foreach ($aliases as $alias) $labels[$alias] = TRUE;
-        $limit = min(count($grid), $header_row + 1 + self::MAX_ROWS);
-        for ($r = $header_row + 1; $r < $limit; $r++)
+        for ($r = $header_row + ($grouped ? 2 : 1); $r < count($grid); $r++)
         {
-            $raw = isset($grid[$r]) ? $grid[$r] : array();
+            $raw = $grid[$r];
+            if (stripos(trim((string) ($raw[0] ?? '')), 'List and Code of Indicators under REMARKS') === 0) break;
             if ($this->blank($raw)) continue;
             $row = $this->normalize_row($raw, $map, $r + 1);
-            if ($row === NULL) continue; // repeated header/footer text
+            if ($row === NULL) continue; // repeated header text
+            if (count($rows) === self::MAX_ROWS)
+            {
+                return $this->error('The file exceeds the '.self::MAX_ROWS.' row limit. Split the register into smaller files.');
+            }
             $key = $row['fields']['lrn'] !== '' ? 'lrn:'.$row['fields']['lrn']
                 : 'name:'.$this->fold($row['fields']['last_name']).'|'.$this->fold($row['fields']['first_name']).'|'.(string) $row['fields']['date_of_birth'];
             if (isset($seen[$key]))
@@ -97,11 +107,6 @@ class Sf1_import
         {
             return $this->error('No learner rows were found below the SF 1 headers.');
         }
-        $overflow = count($grid) - 1 - $header_row - count($rows);
-        if ($overflow > self::MAX_ROWS || count($rows) >= self::MAX_ROWS)
-        {
-            return $this->error('The file exceeds the '.self::MAX_ROWS.' row limit. Split the register into smaller files.');
-        }
         return array('ok' => TRUE, 'error' => NULL, 'meta' => $meta, 'rows' => $rows);
     }
 
@@ -111,7 +116,6 @@ class Sf1_import
 
     private function read_grid($filepath)
     {
-        require_once FCPATH.'vendor/autoload.php';
         try
         {
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filepath);
@@ -125,7 +129,7 @@ class Sf1_import
         $best = NULL;
         foreach ($spreadsheet->getAllSheets() as $sheet)
         {
-            $grid = $sheet->toArray(NULL, TRUE, TRUE, TRUE);
+            $grid = $sheet->toArray(NULL, TRUE, TRUE, FALSE);
             if ($this->find_header($grid)) { $best = $grid; break; }
             if ($best === NULL && count($grid) > 1) $best = $grid;
         }
@@ -136,24 +140,23 @@ class Sf1_import
     /**
      * Locate the header row and build a column-index => field map.
      * SF1 uses a two-row header: group labels on top, sub-labels below.
-     * @return array|null [header_row_index, map]
+     * @return array|null [header_row_index, map, has_subheaders]
      */
     private function find_header(array $grid)
     {
         $limit = min(count($grid), 30);
+        $lrn_headers = self::column_aliases()['lrn'];
         for ($r = 0; $r < $limit; $r++)
         {
             $cells = isset($grid[$r]) ? $grid[$r] : array();
-            $norm = array();
-            $has_lrn = FALSE;
-            foreach ($cells as $c => $value)
+            foreach ($cells as $value)
             {
-                $norm[$c] = $this->normalize_header($value);
-                if ($norm[$c] === 'lrn' || $norm[$c] === 'learnerreferencenumber') $has_lrn = TRUE;
+                if (in_array($this->normalize_header($value), $lrn_headers, TRUE))
+                {
+                    list($map, $grouped) = $this->column_map($grid, $r);
+                    return array($r, $map, $grouped);
+                }
             }
-            if ( ! $has_lrn) continue;
-            $map = $this->column_map($grid, $r);
-            return array($r, $map);
         }
         return NULL;
     }
@@ -162,24 +165,35 @@ class Sf1_import
     private function column_map(array $grid, $header_row)
     {
         $map = array();
-        $rows = array($header_row, $header_row + 1);
-        $max = 0;
-        foreach ($rows as $r) if (isset($grid[$r])) $max = max($max, count($grid[$r]));
         $aliases = array();
         foreach (self::column_aliases() as $field => $labels) foreach ($labels as $label) $aliases[$label] = $field;
-        for ($c = 0; $c <= $max + 2; $c++)
+        $headers = array_map(array($this, 'normalize_header'), $grid[$header_row]);
+        $below = $grid[$header_row + 1] ?? array();
+        $subheaders = array_map(array($this, 'normalize_header'), $below);
+        $grouped = FALSE;
+        $group_fields = array('name' => 'last_name', 'address' => 'address', 'parents' => 'father_name', 'parentsguardian' => 'father_name');
+        foreach ($headers as $c => $header)
         {
-            foreach ($rows as $r)
+            if (isset($group_fields[$header]) && ($aliases[$subheaders[$c] ?? ''] ?? NULL) === $group_fields[$header])
             {
-                $label = isset($grid[$r][$c]) ? $this->normalize_header($grid[$r][$c]) : '';
-                if ($label !== '' && isset($aliases[$label]) && ! in_array($aliases[$label], $map, TRUE))
-                {
-                    $map[$c] = $aliases[$label];
-                    break;
-                }
+                $grouped = TRUE;
+                break;
             }
         }
-        return $map;
+        foreach ($headers as $c => $header)
+        {
+            $field = $aliases[$header] ?? NULL;
+            $subfield = $aliases[$subheaders[$c] ?? ''] ?? NULL;
+            if ($grouped && ($field === NULL || ($header === 'name' && $subfield === 'last_name')))
+            {
+                $field = $subfield;
+            }
+            if ($field !== NULL && ! in_array($field, $map, TRUE))
+            {
+                $map[$c] = $field;
+            }
+        }
+        return array($map, $grouped);
     }
 
     private function normalize_header($value)
@@ -215,10 +229,17 @@ class Sf1_import
                 {
                     $meta['school_year'] = substr(trim($next), 0, 20);
                 }
-                if ($meta['grade'] === NULL)
+                if (preg_match('/\bGrade Level:\s*(Kindergarten|(?:Grade\s*)?\d{1,2})\b/i', (string) $value, $match))
                 {
-                    $g = $this->canonical_grade($value);
-                    if ($g !== NULL) $meta['grade'] = $g;
+                    $meta['grade'] = $this->canonical_grade($match[1]);
+                }
+                elseif ($meta['grade'] === NULL && preg_match('/^(?:Grade\s*\d{1,2}|Kinder(?:garten)?)$/i', trim((string) $value)))
+                {
+                    $meta['grade'] = $this->canonical_grade($value);
+                }
+                if (preg_match('/\bSection:\s*(.+)$/i', (string) $value, $match))
+                {
+                    $meta['section'] = substr(trim($match[1]), 0, 60);
                 }
             }
         }
@@ -264,27 +285,33 @@ class Sf1_import
         };
         $fields = array_fill_keys(array(
             'lrn', 'last_name', 'first_name', 'middle_name', 'extension_name', 'sex', 'date_of_birth',
-            'mother_tongue', 'ip_ethnicity', 'religion', 'address', 'barangay', 'municipality', 'province',
+            'place_of_birth', 'mother_tongue', 'ip_ethnicity', 'religion', 'address', 'barangay', 'municipality', 'province',
             'father_name', 'mother_name', 'guardian_name', 'guardian_relationship', 'contact_number', 'remarks',
         ), '');
         foreach ($fields as $field => $v) $fields[$field] = $get($field);
 
-        if ($fields['last_name'] === '' && $fields['first_name'] === '' && $get('full_name') !== '')
-        {
-            $parts = $this->split_full_name($get('full_name'));
-            $fields['last_name'] = $parts['last_name'];
-            $fields['first_name'] = $parts['first_name'];
-            $fields['middle_name'] = $parts['middle_name'];
-            if ($fields['extension_name'] === '') $fields['extension_name'] = $parts['extension_name'];
-        }
-        // Rows that repeat header labels (a second header block inside the data) are skipped.
-        if (in_array($this->normalize_header($fields['last_name']), array('lastname', 'name'), TRUE)
-            || $this->normalize_header($fields['lrn']) === 'lrn')
+        $full_name = $get('full_name');
+        if (in_array($this->normalize_header($fields['lrn']), self::column_aliases()['lrn'], TRUE)
+            || in_array($this->normalize_header($fields['last_name']), self::column_aliases()['last_name'], TRUE)
+            || ($full_name === '' && $this->blank($fields)))
         {
             return NULL;
         }
 
         $errors = array();
+        if ($fields['last_name'] === '' && $fields['first_name'] === '' && $full_name !== '')
+        {
+            $parts = array_map('trim', explode(',', $full_name));
+            if (count($parts) >= 2 && count($parts) <= 3)
+            {
+                list($fields['last_name'], $fields['first_name']) = $parts;
+                $fields['middle_name'] = $parts[2] ?? '';
+            }
+            else
+            {
+                $errors[] = 'Enter the name as Last Name, First Name, Middle Name.';
+            }
+        }
         $fields['lrn'] = preg_replace('/\D+/', '', $fields['lrn']);
         if ($fields['lrn'] !== '' && strlen($fields['lrn']) !== 12)
         {
@@ -305,7 +332,7 @@ class Sf1_import
         }
         $fields['date_of_birth'] = $dob;
         foreach (array('last_name' => 80, 'first_name' => 80, 'middle_name' => 80, 'extension_name' => 20,
-            'mother_tongue' => 120, 'ip_ethnicity' => 120, 'religion' => 120, 'address' => 255,
+            'place_of_birth' => 200, 'mother_tongue' => 120, 'ip_ethnicity' => 120, 'religion' => 120, 'address' => 255,
             'barangay' => 120, 'municipality' => 120, 'province' => 120, 'father_name' => 160,
             'mother_name' => 160, 'guardian_name' => 160, 'guardian_relationship' => 60, 'contact_number' => 30) as $field => $max)
         {
@@ -323,29 +350,6 @@ class Sf1_import
             'errors' => $errors,
             'valid' => ! $errors,
         );
-    }
-
-    /** "DELA CRUZ, JUAN MIGUEL JR." -> name parts. */
-    private function split_full_name($value)
-    {
-        $parts = array('last_name' => '', 'first_name' => '', 'middle_name' => '', 'extension_name' => '');
-        $value = trim((string) $value);
-        if ($value === '') return $parts;
-        $halves = array_map('trim', explode(',', $value, 2));
-        $parts['last_name'] = $halves[0];
-        if ( ! isset($halves[1]) || $halves[1] === '') { $parts['first_name'] = $halves[0]; $parts['last_name'] = ''; return $parts; }
-        $tokens = preg_split('/\s+/', $halves[1]);
-        $last = strtoupper(rtrim(end($tokens), '.'));
-        if (in_array($last, array('JR', 'SR', 'II', 'III', 'IV', 'V'), TRUE))
-        {
-            $parts['extension_name'] = array_pop($tokens);
-        }
-        if (count($tokens) > 1)
-        {
-            $parts['middle_name'] = array_pop($tokens);
-        }
-        $parts['first_name'] = implode(' ', $tokens);
-        return $parts;
     }
 
     private function normalize_sex($value)
@@ -370,6 +374,12 @@ class Sf1_import
                 return $this->valid_date($out) ? $out : NULL;
             }
             catch (Throwable $e) { return NULL; }
+        }
+        if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', $value, $parts)
+            && checkdate((int) $parts[1], (int) $parts[2], (int) $parts[3]))
+        {
+            $out = sprintf('%04d-%02d-%02d', $parts[3], $parts[1], $parts[2]);
+            return $this->valid_date($out) ? $out : NULL;
         }
         foreach (array('Y-m-d', 'm/d/Y', 'm/d/y', 'm-d-Y', 'm-d-y', 'd/m/Y', 'd-m-Y', 'Y/m/d', 'F j, Y', 'j F Y', 'M j, Y', 'j M Y') as $format)
         {

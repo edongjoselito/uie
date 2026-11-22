@@ -11,7 +11,7 @@ $sort_link = function ($key) use ($list_query, $sort, $direction) {
 };
 $sort_icon = function ($key) use ($sort, $direction) { return $sort === $key ? ($direction === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down') : 'bi-arrow-down-up'; };
 ?>
-<div class="learner-workspace learner-directory directory-refined">
+<div class="learner-workspace learner-workspace-fluid learner-directory directory-refined">
     <header class="learner-page-heading">
         <div><p class="learner-eyebrow">LEARNERS / PROFILE</p><h1>Learner Profiles</h1><p>Manage your school’s learners, enrollments, and education programs in one place.</p></div>
         <?php if ($can_create || ($year && $year->status === 'open' && $this->access_control->can('learners.import'))): ?><div class="directory-add-group"><?php if ($this->access_control->can('learners.import')): ?><a class="btn btn-outline-primary directory-add" href="<?php echo site_url('learners/import?school_year_id='.(int) $year_id); ?>"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Import SF 1</a><?php endif; ?><?php if ($can_create): ?><a class="btn btn-primary directory-add" href="<?php echo site_url('learners/create?school_year_id='.(int) $year_id); ?>"><i class="bi bi-plus-lg" aria-hidden="true"></i> Encode Learner</a><?php endif; ?></div><?php endif; ?>
@@ -58,6 +58,7 @@ $sort_icon = function ($key) use ($sort, $direction) { return $sort === $key ? (
                 <th scope="col">Program Tags</th><th scope="col" class="text-end">Actions</th>
             </tr></thead><tbody>
             <?php foreach ($rows as $index => $row):
+                $row_tags = $row->program_codes ? explode(',', $row->program_codes) : array();
                 $initials = function_exists('mb_substr') ? mb_substr($row->first_name, 0, 1, 'UTF-8').mb_substr($row->last_name, 0, 1, 'UTF-8') : substr($row->first_name, 0, 1).substr($row->last_name, 0, 1);
             ?><tr>
                 <td class="directory-row-number"><?php echo $offset + $index + 1; ?></td>
@@ -65,7 +66,28 @@ $sort_icon = function ($key) use ($sort, $direction) { return $sort === $key ? (
                 <td><span class="directory-lrn <?php echo $row->lrn ? '' : 'is-missing'; ?>"><?php echo e($row->lrn ?: 'Not Assigned'); ?></span></td>
                 <td><span class="directory-sex"><?php echo e($row->sex); ?></span></td>
                 <td><strong class="directory-grade"><?php echo e($row->grade_level ?: 'Not Set'); ?></strong><span class="directory-section"><?php echo e($row->section ?: 'No Section'); ?></span></td>
-                <td><div class="directory-program-tags"><?php if ($row->program_codes): foreach (explode(',', $row->program_codes) as $code): $tag = programs($code); if ( ! $tag) continue; ?><span class="directory-program-tag" style="--tag-color: <?php echo e($tag['color']); ?>" title="<?php echo e($tag['name']); ?>"><i class="bi <?php echo e($tag['icon']); ?>" aria-hidden="true"></i><?php echo e($code === 'spfl' ? 'FL / SPFL' : $tag['short']); ?></span><?php endforeach; else: ?><span class="directory-no-tags">No Program Tags</span><?php endif; ?></div></td>
+                <td>
+                    <div class="directory-program-tags">
+                        <?php if ( ! $row_tags): ?><span class="directory-no-tags">No Program Tags</span><?php endif; ?>
+                        <?php foreach ($row_tags as $code): $tag = programs($code); if ( ! $tag) continue; ?>
+                            <span class="directory-program-tag" style="--tag-color: <?php echo e($tag['color']); ?>" title="<?php echo e($tag['name']); ?>"><i class="bi <?php echo e($tag['icon']); ?>" aria-hidden="true"></i><?php echo e($code === 'spfl' ? 'FL / SPFL' : $tag['short']); ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($can_edit): ?>
+                    <details class="directory-tag-editor">
+                        <summary aria-label="<?php echo e('Edit program tags for '.$row->first_name.' '.$row->last_name); ?>">Edit Tags</summary>
+                        <?php echo form_open(e(site_url('learners/program_tags/'.(int) $row->enrollment_id).'?'.http_build_query($list_query + array('page' => $offset)))); ?>
+                            <fieldset>
+                                <legend class="visually-hidden">Program tags</legend>
+                                <?php foreach (programs() as $code => $tag): ?>
+                                    <label><input type="checkbox" class="form-check-input" name="programs[]" value="<?php echo e($code); ?>" <?php echo in_array($code, $row_tags, TRUE) ? 'checked' : ''; ?>> <?php echo e($code === 'spfl' ? 'FL / SPFL' : $tag['short']); ?></label>
+                                <?php endforeach; ?>
+                            </fieldset>
+                            <button class="btn btn-primary btn-sm" type="submit">Save Tags</button>
+                        <?php echo form_close(); ?>
+                    </details>
+                    <?php endif; ?>
+                </td>
                 <td class="text-end"><?php if ($can_edit): ?><a class="directory-edit" href="<?php echo site_url('learners/edit/'.(int) $row->enrollment_id); ?>" aria-label="<?php echo e('Edit Enrollment for '.$row->first_name.' '.$row->last_name); ?>"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</a><?php else: ?><span class="directory-readonly"><i class="bi bi-lock" aria-hidden="true"></i> View Only</span><?php endif; ?></td>
             </tr><?php endforeach; ?>
             <?php if ( ! $rows): ?><tr><td colspan="7"><div class="directory-empty"><span class="directory-empty-icon"><i class="bi <?php echo $has_filters ? 'bi-search' : 'bi-person-vcard'; ?>" aria-hidden="true"></i></span><h3><?php echo $has_filters ? 'No Matching Learners' : 'Your Learner List Starts Here'; ?></h3><p>No learners match these filters. <?php echo $has_filters ? 'Try a different name, grade, or program to find the record you need.' : 'Choose a school year or encode a learner to get started.'; ?></p><?php if ($has_filters): ?><a class="btn btn-outline-primary btn-sm" href="<?php echo site_url('learners?school_year_id='.(int) $year_id); ?>">Clear Filters</a><?php elseif ($can_create): ?><a class="btn btn-primary btn-sm" href="<?php echo site_url('learners/create?school_year_id='.(int) $year_id); ?>">Encode Learner</a><?php endif; ?></div></td></tr><?php endif; ?>
