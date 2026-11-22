@@ -6,6 +6,17 @@ class Learner_model extends MY_Model
     protected $table = 'learners';
     protected $default_order = 'last_name ASC, first_name ASC';
 
+    public function insert(array $data)
+    {
+        return parent::insert(uppercase_learner_names($data));
+    }
+
+    public function update($id, array $data)
+    {
+        return parent::update($id, uppercase_learner_names($data));
+    }
+
+
     // ---------------------------------------------------------------
     // Identity / duplicate detection
     // ---------------------------------------------------------------
@@ -137,6 +148,7 @@ class Learner_model extends MY_Model
      */
     public function create_with_enrollment(array $learner, array $enrollment)
     {
+        $learner = uppercase_learner_names($learner);
         $this->db->trans_start();
 
         $learner_id = $this->insert($learner);
@@ -159,6 +171,7 @@ class Learner_model extends MY_Model
      */
     public function update_with_enrollment($learner_id, array $learner, $enrollment_id = NULL, array $enrollment = array())
     {
+        $learner = uppercase_learner_names($learner);
         $old = (array) $this->get($learner_id);
 
         $this->db->trans_start();

@@ -27,7 +27,8 @@ regions ──< divisions ──< schools ──< learner_school_records >──
 ## Centralized Learner Registry (core design)
 
 - **`learners`** — one row per learner, common identity only (LRN, name, sex, birth,
-  address, guardian info). `lrn` is UNIQUE (NULLs allowed for learners without LRN).
+  mother tongue, IP ethnic group, religion, address, guardian info — the SF 1
+  School Register field set). `lrn` is UNIQUE (NULLs allowed for learners without LRN).
 - **`learner_school_records`** — enrollment rows linking a learner to
   `school + division + region + school_year` (UNIQUE on learner+school+year).
   One row per school year enables history, transfers, and trend reports.

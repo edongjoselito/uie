@@ -55,3 +55,31 @@
         }
     });
 })(jQuery);
+
+
+// Store the actual input value in uppercase, including pasted and autofilled names.
+(function () {
+    function uppercaseName(input) {
+        var start = input.selectionStart;
+        var end = input.selectionEnd;
+        var current = input.value;
+        var upper = current.toUpperCase();
+        if (current === upper) return;
+        input.value = upper;
+        if (start !== null && end !== null) {
+            input.setSelectionRange(current.slice(0, start).toUpperCase().length,
+                current.slice(0, end).toUpperCase().length);
+        }
+    }
+    document.querySelectorAll('[data-uppercase-name]').forEach(function (input) {
+        uppercaseName(input);
+        input.addEventListener('input', function (event) {
+            if (!event.isComposing) uppercaseName(input);
+        });
+        input.addEventListener('compositionend', function () { uppercaseName(input); });
+        input.addEventListener('change', function () { uppercaseName(input); });
+    });
+    document.addEventListener('submit', function (event) {
+        event.target.querySelectorAll('[data-uppercase-name]').forEach(uppercaseName);
+    }, true);
+}());

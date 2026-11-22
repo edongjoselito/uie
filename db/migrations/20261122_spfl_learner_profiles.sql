@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS uie_spfl_learner_profiles (
+    id                      INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    learner_id              INT UNSIGNED NOT NULL,
+    learner_school_record_id INT UNSIGNED NOT NULL,
+    foreign_language        VARCHAR(120) NULL,
+    proficiency_level       VARCHAR(60)  NULL,
+    educational_assistance  VARCHAR(255) NULL,
+    program_support         VARCHAR(255) NULL,
+    remarks                 TEXT         NULL,
+    status                  ENUM('active','archived') NOT NULL DEFAULT 'active',
+    created_by              INT UNSIGNED NULL,
+    updated_by              INT UNSIGNED NULL,
+    created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_spfl_profile (learner_school_record_id),
+    KEY idx_spfl_learner (learner_id),
+    CONSTRAINT fk_spfl_lsr FOREIGN KEY (learner_school_record_id) REFERENCES uie_learner_school_records(id),
+    CONSTRAINT fk_spfl_lrn FOREIGN KEY (learner_id) REFERENCES uie_learners(id)
+) ENGINE=InnoDB;

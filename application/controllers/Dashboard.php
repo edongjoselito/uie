@@ -15,8 +15,14 @@ class Dashboard extends Admin_Controller
             redirect('superadmin/dashboard');
         }
 
+        if ($this->user['level'] === 'school')
+        {
+            $school = empty($this->user['school_id']) ? NULL : $this->db->where('id', $this->user['school_id'])
+                ->where('status', 'active')->get('schools')->row();
+            if ( ! $school) $this->access_control->deny('An active school assignment is required.');
+        }
+
         $this->load->model('Learner_model');
-        $this->load->model('School_model');
         $this->load->model('Division_model');
 
         $scope = array(
@@ -35,13 +41,23 @@ class Dashboard extends Admin_Controller
             'scope'       => $scope,
             'sy'          => active_sy(),
             'total_learners' => $this->Learner_model->count_scoped($filters),
-            'total_schools'  => $this->School_model->count_filtered(array_filter(array(
-                'region_id'   => $scope['region_id'],
-                'division_id' => $scope['division_id'],
-                'status'      => 'active',
-                'school_id'   => $scope['school_id'] ? $scope['school_id'] : NULL,
-            ))),
         );
+
+        $sy = $data['sy'];
+        $counts = array_fill_keys(array_keys(programs()), 0);
+        $this->db->select('t.program, COUNT(DISTINCT e.learner_id) AS total', FALSE)
+            ->from('learner_program_tags t')->join('learner_school_records e', 'e.id = t.learner_school_record_id')
+            ->join('learners l', 'l.id = e.learner_id')->where('e.status', 'active')->where('l.status', 'active')
+            ->where('e.school_year_id', $sy ? $sy->id : 0);
+        foreach (array('region_id', 'division_id', 'school_id') as $key)
+            if ($scope[$key]) $this->db->where('e.'.$key, $scope[$key]);
+        foreach ($this->db->group_by('t.program')->get()->result() as $row) $counts[$row->program] = (int) $row->total;
+        $data['program_counts'] = $counts;
+        if ($this->user['level'] === 'school')
+        {
+            $this->load->model('School_learner_model');
+            $data['total_learners'] = $this->School_learner_model->count_rows((int) $scope['school_id'], $sy ? $sy->id : 0);
+        }
 
         // Org labels
         if ($scope['region_id'])   $data['region_label']   = $this->db->select('name')->where('id', $scope['region_id'])->get('regions')->row('name');

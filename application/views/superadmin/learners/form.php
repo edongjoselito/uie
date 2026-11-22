@@ -34,19 +34,19 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label required-label">Last Name</label>
-                        <input type="text" name="last_name" class="form-control" maxlength="80" value="<?php echo e(set_value('last_name', $learner->last_name ?? '')); ?>" required>
+                        <input type="text" name="last_name" data-uppercase-name autocapitalize="characters" class="form-control" maxlength="80" value="<?php echo e(set_value('last_name', $learner->last_name ?? '')); ?>" required>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label required-label">First Name</label>
-                        <input type="text" name="first_name" class="form-control" maxlength="80" value="<?php echo e(set_value('first_name', $learner->first_name ?? '')); ?>" required>
+                        <input type="text" name="first_name" data-uppercase-name autocapitalize="characters" class="form-control" maxlength="80" value="<?php echo e(set_value('first_name', $learner->first_name ?? '')); ?>" required>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Middle Name</label>
-                        <input type="text" name="middle_name" class="form-control" maxlength="80" value="<?php echo e(set_value('middle_name', $learner->middle_name ?? '')); ?>">
+                        <input type="text" name="middle_name" data-uppercase-name autocapitalize="characters" class="form-control" maxlength="80" value="<?php echo e(set_value('middle_name', $learner->middle_name ?? '')); ?>">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Extension</label>
-                        <input type="text" name="extension_name" class="form-control" maxlength="20" value="<?php echo e(set_value('extension_name', $learner->extension_name ?? '')); ?>" placeholder="Jr., III">
+                        <input type="text" name="extension_name" data-uppercase-name autocapitalize="characters" class="form-control" maxlength="20" value="<?php echo e(set_value('extension_name', $learner->extension_name ?? '')); ?>" placeholder="Jr., III">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Place of Birth</label>
@@ -83,15 +83,15 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Father's Name</label>
-                        <input type="text" name="father_name" class="form-control" maxlength="160" value="<?php echo e(set_value('father_name', $learner->father_name ?? '')); ?>">
+                        <input type="text" name="father_name" data-uppercase-name autocapitalize="characters" class="form-control" maxlength="160" value="<?php echo e(set_value('father_name', $learner->father_name ?? '')); ?>">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Mother's Name</label>
-                        <input type="text" name="mother_name" class="form-control" maxlength="160" value="<?php echo e(set_value('mother_name', $learner->mother_name ?? '')); ?>">
+                        <input type="text" name="mother_name" data-uppercase-name autocapitalize="characters" class="form-control" maxlength="160" value="<?php echo e(set_value('mother_name', $learner->mother_name ?? '')); ?>">
                     </div>
                     <div class="col-md-8">
                         <label class="form-label">Guardian's Name</label>
-                        <input type="text" name="guardian_name" class="form-control" maxlength="160" value="<?php echo e(set_value('guardian_name', $learner->guardian_name ?? '')); ?>">
+                        <input type="text" name="guardian_name" data-uppercase-name autocapitalize="characters" class="form-control" maxlength="160" value="<?php echo e(set_value('guardian_name', $learner->guardian_name ?? '')); ?>">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Relationship to Learner</label>
@@ -185,7 +185,7 @@
                 <?php if (isset($_GET['dupe']) || $this->session->userdata('dupes')): $this->session->unset_userdata('dupes'); ?>
                 <div class="form-check mt-3">
                     <input class="form-check-input" type="checkbox" name="confirm_duplicate" value="1" id="confirmDupe">
-                    <label class="form-check-label small" for="confirmDupe">Confirm add anyway (possible duplicate detected)</label>
+                    <label class="form-check-label small" for="confirmDupe">Confirm Add Anyway (Possible Duplicate Detected)</label>
                 </div>
                 <?php endif; ?>
             </div>

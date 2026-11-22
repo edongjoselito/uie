@@ -6,7 +6,7 @@
 <title><?php echo e($page_title); ?></title>
 <link rel="stylesheet" href="<?php echo base_url('assets/css/bootstrap.min.css'); ?>">
 <link rel="stylesheet" href="<?php echo base_url('assets/css/bootstrap-icons.min.css'); ?>">
-<link rel="stylesheet" href="<?php echo base_url('assets/css/app.css'); ?>">
+<link rel="stylesheet" href="<?php echo base_url('assets/css/app.css').'?v='.filemtime(FCPATH.'assets/css/app.css'); ?>">
 </head>
 <body>
 <div class="uie-wrapper">
@@ -38,9 +38,27 @@
                 <?php else: ?>
                 <li class="nav-section"><?php echo e(ucfirst($user['level'])); ?> Menu</li>
                 <li><a class="nav-link <?php echo nav_active('dashboard'); ?>" href="<?php echo site_url('dashboard'); ?>"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-                <li><a class="nav-link disabled text-white-50" href="#" title="Coming in Phase 3"><i class="bi bi-person-vcard"></i> Learners <span class="badge text-bg-secondary ms-1">soon</span></a></li>
-                <li><a class="nav-link disabled text-white-50" href="#" title="Coming in Phase 7"><i class="bi bi-send"></i> Submissions <span class="badge text-bg-secondary ms-1">soon</span></a></li>
-                <li><a class="nav-link disabled text-white-50" href="#" title="Coming in Phase 7"><i class="bi bi-file-earmark-bar-graph"></i> Reports <span class="badge text-bg-secondary ms-1">soon</span></a></li>
+                <?php if ($user['level'] === 'school' && ! empty($user['school_id']) && $this->access_control->can('learners.view')): ?>
+                <?php $learners_open = $this->uri->segment(1) === 'learners'; ?>
+                <li>
+                    <button class="nav-link nav-submenu-toggle <?php echo $learners_open ? '' : 'collapsed'; ?>" type="button" data-bs-toggle="collapse" data-bs-target="#learnersMenu" aria-expanded="<?php echo $learners_open ? 'true' : 'false'; ?>" aria-controls="learnersMenu">
+                        <i class="bi bi-person-vcard" aria-hidden="true"></i> Learners <i class="bi bi-chevron-down ms-auto submenu-chevron" aria-hidden="true"></i>
+                    </button>
+                    <ul class="nav flex-column collapse <?php echo $learners_open ? 'show' : ''; ?> sidebar-submenu" id="learnersMenu">
+                        <li><a class="nav-link <?php echo nav_active('learners'); ?>" href="<?php echo site_url('learners'); ?>" <?php echo $learners_open ? 'aria-current="page"' : ''; ?>><i class="bi bi-person-lines-fill" aria-hidden="true"></i> Profile</a></li>
+                        <?php if ($this->access_control->can('learners.import')): ?>
+                        <li><a class="nav-link" href="<?php echo site_url('learners/import'); ?>"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Import SF 1</a></li>
+                        <?php endif; ?>
+                    </ul>
+                </li>
+                <?php elseif ($user['level'] === 'division' && ! empty($user['division_id']) && $this->access_control->can('learners.view')): ?>
+                <li><a class="nav-link <?php echo nav_active('learners'); ?>" href="<?php echo site_url('learners'); ?>" <?php echo $this->uri->segment(1) === 'learners' ? 'aria-current="page"' : ''; ?>><i class="bi bi-person-vcard"></i> Learners</a></li>
+                <?php endif; ?>
+                <?php if (in_array($user['level'], array('division', 'region'), TRUE) && $this->access_control->can('reports.view')): ?>
+                <li><a class="nav-link <?php echo nav_active('reports'); ?>" href="<?php echo site_url('reports'); ?>" <?php echo $this->uri->segment(1) === 'reports' ? 'aria-current="page"' : ''; ?>><i class="bi bi-file-earmark-bar-graph"></i> Reports</a></li>
+                <?php elseif ($user['level'] === 'school' && ! empty($user['school_id']) && $this->access_control->can('reports.view')): ?>
+                <li><a class="nav-link <?php echo nav_active('reports'); ?>" href="<?php echo site_url('reports'); ?>" <?php echo $this->uri->segment(1) === 'reports' ? 'aria-current="page"' : ''; ?>><i class="bi bi-file-earmark-bar-graph"></i> Reports</a></li>
+                <?php endif; ?>
                 <?php endif; ?>
             </ul>
         </nav>
@@ -105,7 +123,7 @@
 <script src="<?php echo base_url('assets/js/jquery-3.7.1.min.js'); ?>"></script>
 <script src="<?php echo base_url('assets/js/bootstrap.bundle.min.js'); ?>"></script>
 <script src="<?php echo base_url('assets/js/chart.umd.min.js'); ?>"></script>
-<script src="<?php echo base_url('assets/js/app.js'); ?>"></script>
+<script src="<?php echo base_url('assets/js/app.js').'?v='.filemtime(FCPATH.'assets/js/app.js'); ?>"></script>
 <script>
 var UIEIMS = {
     baseUrl: '<?php echo base_url(); ?>',

@@ -80,3 +80,6 @@ $route['superadmin/learners/(:num)']        = 'superadmin/learners/view/$1';
 // AJAX endpoints for dependent dropdowns
 $route['ajax/divisions-by-region/(:num)']   = 'ajax/divisions_by_region/$1';
 $route['ajax/schools-by-division/(:num)']   = 'ajax/schools_by_division/$1';
+
+$route['forgot-password'] = 'auth/forgot_password';
+$route['reset-password'] = 'auth/reset_password';

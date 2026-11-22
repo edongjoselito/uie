@@ -13,6 +13,8 @@ class Access_control
     /** @var CI_Controller */
     protected $CI;
 
+    protected $context_refreshed = FALSE;
+
     public function __construct()
     {
         $this->CI =& get_instance();
@@ -24,7 +26,17 @@ class Access_control
 
     public function is_logged_in()
     {
-        return (bool) $this->CI->session->userdata('uie_uid');
+        $uid = $this->CI->session->userdata('uie_uid');
+        if ( ! $uid) return FALSE;
+        $row = $this->CI->db->select('password_hash, status')->where('id', $uid)->get('users')->row_array();
+        $version = $this->CI->session->userdata('uie_password_version');
+        if ( ! $row || $row['status'] !== 'active' || ! is_string($version)
+            || ! hash_equals(hash('sha256', $row['password_hash']), $version))
+        {
+            $this->CI->session->unset_userdata(array('uie_uid', 'uie_user', 'uie_password_version'));
+            return FALSE;
+        }
+        return TRUE;
     }
 
     /**
@@ -38,6 +50,13 @@ class Access_control
         {
             return NULL;
         }
+        if ( ! $this->context_refreshed)
+        {
+            $row = $this->CI->db->where('id', $this->CI->session->userdata('uie_uid'))->get('users')->row_array();
+            $context = $this->build_context($row);
+            $this->CI->session->set_userdata('uie_user', $context);
+            $this->context_refreshed = TRUE;
+        }
         return $this->CI->session->userdata('uie_user');
     }
 
@@ -45,6 +64,19 @@ class Access_control
      * Build the session context after a successful authentication.
      */
     public function establish_session(array $user_row)
+    {
+        $CI = $this->CI;
+        $context = $this->build_context($user_row);
+        $CI->session->sess_regenerate(TRUE);
+        $CI->session->set_userdata('uie_uid', (int) $user_row['id']);
+        $CI->session->set_userdata('uie_password_version', hash('sha256', $user_row['password_hash']));
+        $CI->session->set_userdata('uie_user', $context);
+        $this->context_refreshed = TRUE;
+        return $context;
+    }
+
+    /** Refresh database role grants and school assignment once per request. */
+    private function build_context(array $user_row)
     {
         $CI = $this->CI;
         $CI->load->model('User_model');
@@ -88,16 +120,12 @@ class Access_control
             'must_change_password' => (int) $user_row['must_change_password'],
         );
 
-        $CI->session->sess_regenerate(TRUE);
-        $CI->session->set_userdata('uie_uid', (int) $user_row['id']);
-        $CI->session->set_userdata('uie_user', $context);
-
         return $context;
     }
 
     public function clear_session()
     {
-        $this->CI->session->unset_userdata(array('uie_uid', 'uie_user'));
+        $this->CI->session->unset_userdata(array('uie_uid', 'uie_user', 'uie_password_version'));
         $this->CI->session->sess_destroy();
     }
 

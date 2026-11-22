@@ -6,7 +6,7 @@
 <title><?php echo e($page_title); ?></title>
 <link rel="stylesheet" href="<?php echo base_url('assets/css/bootstrap.min.css'); ?>">
 <link rel="stylesheet" href="<?php echo base_url('assets/css/bootstrap-icons.min.css'); ?>">
-<link rel="stylesheet" href="<?php echo base_url('assets/css/app.css'); ?>">
+<link rel="stylesheet" href="<?php echo base_url('assets/css/app.css').'?v='.filemtime(FCPATH.'assets/css/app.css'); ?>">
 </head>
 <body class="auth-page">
 <?php echo $content; ?>

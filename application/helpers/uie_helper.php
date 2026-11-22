@@ -283,3 +283,20 @@ if ( ! function_exists('csrf_json'))
         );
     }
 }
+
+if ( ! function_exists('uppercase_learner_names'))
+{
+    /** Normalize personal names before persistence, including accented letters. */
+    function uppercase_learner_names(array $data)
+    {
+        foreach (array('first_name', 'last_name', 'middle_name', 'extension_name', 'father_name', 'mother_name', 'guardian_name') as $field)
+        {
+            if (isset($data[$field]))
+            {
+                $name = trim((string) $data[$field]);
+                $data[$field] = function_exists('mb_strtoupper') ? mb_strtoupper($name, 'UTF-8') : strtoupper($name);
+            }
+        }
+        return $data;
+    }
+}
